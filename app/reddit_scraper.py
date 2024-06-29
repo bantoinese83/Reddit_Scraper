@@ -66,6 +66,7 @@ class RedditScraper:
                     'content': submission.selftext or ''
                 })
         logger.info(f"Fetched {len(posts)} posts.")
+        await self.reddit.close() # Close the Reddit instance
         return posts
 
     @staticmethod
