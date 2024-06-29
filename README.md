@@ -37,7 +37,7 @@ python main.py
 
 To run the tests, execute the following command:
 ```
-python -m unittest discover tests
+/Users/doepesci/miniconda3/envs/Reddit_Scraper/bin/python -m pytest tests
 ```
 
 ## Built With
