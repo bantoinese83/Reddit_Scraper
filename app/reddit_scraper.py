@@ -2,8 +2,9 @@ import re
 import string
 from datetime import datetime
 
+import asyncio
 import pandas as pd
-import praw
+import asyncpraw
 from halo import Halo
 from loguru import logger
 
@@ -30,12 +31,9 @@ POSTS_FIELDS = Config.POSTS_FIELDS
 
 class RedditScraper:
     def __init__(self, client_id, client_secret, user_agent):
-        self.client_id = client_id
-        self.client_secret = client_secret
-        self.user_agent = user_agent
-        self.reddit = None
         self.spinner = Halo(text='Processing', spinner='dots')
         self.setup_logging()
+        self.reddit = asyncpraw.Reddit(client_id=client_id, client_secret=client_secret, user_agent=user_agent)
 
     @staticmethod
     def setup_logging():
@@ -44,46 +42,30 @@ class RedditScraper:
     def initialize_reddit(self):
         """Initialize and return a Reddit instance."""
         try:
-            self.reddit = praw.Reddit(client_id=self.client_id,
-                                      client_secret=self.client_secret,
-                                      user_agent=self.user_agent)
+            self.reddit.read_only = True
             logger.info("Reddit instance initialized successfully.")
-        except Exception as init_error:
-            logger.error(f"Failed to initialize Reddit instance: {init_error}")
-            raise
-
-    def fetch_reddit_posts(self, search_query=SEARCH_QUERY, subreddit_limit=SUBREDDIT_LIMIT, post_limit=POST_LIMIT,
-                           posts_sort=POSTS_SORT, posts_fields=POSTS_FIELDS):
-        """Fetch posts from subreddits matching the search query."""
-        if posts_fields is None:
-            posts_fields = ['title', 'self_text', 'score', 'num_comments', 'created_utc', 'permalink', 'url', 'author']
-        posts = []
-        try:
-            subreddits = self.reddit.subreddits.search(search_query, limit=subreddit_limit)
-            for subreddit in subreddits:
-                subreddit_name = subreddit.display_name
-                if posts_sort == 'hot':
-                    subreddit_posts = self.reddit.subreddit(subreddit_name).hot(limit=post_limit)
-                elif posts_sort == 'top':
-                    subreddit_posts = self.reddit.subreddit(subreddit_name).top(limit=post_limit)
-                elif posts_sort == 'new':
-                    subreddit_posts = self.reddit.subreddit(subreddit_name).new(limit=post_limit)
-                else:
-                    raise ValueError(f"Invalid sort option: {posts_sort}")
-
-                for submission in subreddit_posts:
-                    post = {}
-                    for field in posts_fields:
-                        if hasattr(submission, field):
-                            if field == 'created_utc':
-                                post['created_at'] = datetime.fromtimestamp(getattr(submission, field))
-                            else:
-                                post[field] = getattr(submission, field)
-                    posts.append(post)
-            logger.info(f"Fetched {len(posts)} posts from subreddits matching '{search_query}'.")
         except Exception as e:
-            logger.error(f"Failed to fetch posts: {e}")
+            logger.error(f"Failed to initialize Reddit instance: {e}")
             raise
+
+    async def fetch_reddit_posts(self, search_query, subreddit_limit, post_limit):
+        posts = []
+        subreddits = self.reddit.subreddits.search(search_query, limit=subreddit_limit)
+        async for subreddit in subreddits:
+            subreddit_name = subreddit.display_name
+            subreddit_posts = subreddit.top(limit=post_limit)
+            async for submission in subreddit_posts:  # Use async for here
+                posts.append({
+                    'subreddit': subreddit_name,
+                    'title': submission.title,
+                    'score': submission.score,
+                    'id': submission.id,
+                    'url': submission.url,
+                    'num_comments': submission.num_comments,
+                    'created_at': datetime.fromtimestamp(submission.created_utc),
+                    'content': submission.selftext or ''
+                })
+        logger.info(f"Fetched {len(posts)} posts.")
         return posts
 
     @staticmethod
@@ -131,14 +113,14 @@ class RedditScraper:
             logger.error(f"Failed to shuffle and save DataFrame: {shuffle_error}")
             raise
 
-    def run(self):
+    async def run(self):
         try:
             self.spinner.start('Initializing Reddit instance...')
             self.initialize_reddit()
             self.spinner.succeed('Reddit instance initialized.')
 
             self.spinner.start('Fetching Reddit posts...')
-            fetched_posts = self.fetch_reddit_posts(SEARCH_QUERY, SUBREDDIT_LIMIT, POST_LIMIT)
+            fetched_posts = await self.fetch_reddit_posts(SEARCH_QUERY, SUBREDDIT_LIMIT, POST_LIMIT)
             self.spinner.succeed('Reddit posts fetched.')
 
             self.spinner.start('Saving posts to CSV...')
@@ -163,4 +145,4 @@ class RedditScraper:
 
 if __name__ == "__main__":
     scraper = RedditScraper(CLIENT_ID, CLIENT_SECRET, USER_AGENT)
-    scraper.run()
+    asyncio.run(scraper.run())

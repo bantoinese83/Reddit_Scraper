@@ -1,14 +1,16 @@
 import streamlit as st
-from reddit_scraper import CLIENT_ID, CLIENT_SECRET, USER_AGENT, RedditScraper
+from reddit_scraper import RedditScraper, CLIENT_ID, CLIENT_SECRET, USER_AGENT, SUBREDDIT_LIMIT, POST_LIMIT
+import asyncio
 
 
 class StreamlitRedditScraper:
-    def __init__(self):
-        self.scraper = RedditScraper(CLIENT_ID, CLIENT_SECRET, USER_AGENT)
-        self.scraper.initialize_reddit()
-
-    def fetch_posts(self, query):
-        return self.scraper.fetch_reddit_posts(query, subreddit_limit=5, post_limit=5)
+    @staticmethod
+    def fetch_posts(query):
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        reddit_scraper = RedditScraper(CLIENT_ID, CLIENT_SECRET, USER_AGENT)
+        reddit_scraper.initialize_reddit()
+        return loop.run_until_complete(reddit_scraper.fetch_reddit_posts(query, SUBREDDIT_LIMIT, POST_LIMIT))
 
     def run(self):
         st.set_page_config(page_title="Reddit Scraper", page_icon=":mag:")
