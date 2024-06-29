@@ -25,7 +25,35 @@ These instructions will get you a copy of the project up and running on your loc
     ```
     pip install -r requirements.txt
     ```
-
+4. Create a Reddit app:
+    - Go to [Reddit](https://www.reddit.com/prefs/apps)
+    - Click on "Create App"
+    - Fill in the details and click on "Create App"
+    - Copy the client ID and client secret
+5. Create a virtual environment:
+    ```
+    python -m venv Reddit_Scraper
+    ```
+6. Activate the virtual environment:
+    - Windows:
+        ```
+        Reddit_Scraper\Scripts\activate
+        ```
+    - MacOS/Linux:
+        ```
+        source Reddit_Scraper/bin/activate
+        ```
+7. Create a `.env` file in the project directory and add the following:
+8. ```
+    CLIENT_ID=<client_id>
+    CLIENT_SECRET=<client_secret
+    USER_AGENT=<user_agent>
+    ```
+9. Replace `<client_id>`, `<client_secret>`, and `<user_agent>` with the values from the Reddit app you created.
+10. Deactivate the virtual environment:
+    ```
+    deactivate
+    ```
 ## Usage
 
 To run the Reddit scraper, execute the following command:

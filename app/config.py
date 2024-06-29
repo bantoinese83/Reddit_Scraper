@@ -1,11 +1,14 @@
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 class Config:
     # Reddit API credentials
-    CLIENT_ID = ''  # Your client ID
-    CLIENT_SECRET = ''  # Your client secret
-    USER_AGENT = ''  # Your user agent
+    CLIENT_ID = os.getenv('CLIENT_ID')
+    CLIENT_SECRET = os.getenv('CLIENT_SECRET')
+    USER_AGENT = os.getenv('USER_AGENT')
 
     # Directories
     DATA_DIR = 'data'
